@@ -1,7 +1,6 @@
 import time
 import torch
 
-
 class Attack(object):
     def __init__(self, name, model):
 

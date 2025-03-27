@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from attacks.attack import Attack
 
-class DeepFool(Attack):
+class DeepFoolTargeted(Attack):
     r"""
     'DeepFool: A Simple and Accurate Method to Fool Deep Neural Networks'
     [https://arxiv.org/abs/1511.04599]
@@ -34,7 +34,7 @@ class DeepFool(Attack):
         self.fool_checker = 0
         self.number_of_iterations = 0
 
-    def forward(self, images, labels, ):
+    def forward(self, images, labels, attack_targets):
         r"""
         Overridden.
         """
@@ -56,7 +56,7 @@ class DeepFool(Attack):
         while (True in correct) and (curr_steps < self.steps):
             for idx in range(batch_size):
                 if not correct[idx]: continue
-                early_stop, pre, adv_image, delta = self._forward_indiv(adv_images[idx], labels[idx])
+                early_stop, pre, adv_image, delta = self._forward_indiv(adv_images[idx], labels[idx], attack_targets[idx])
                 adv_images[idx] = adv_image
                 target_labels[idx] = pre
                 deltas[idx] += delta
@@ -71,11 +71,11 @@ class DeepFool(Attack):
 
         return adv_images, target_labels, deltas
 
-    def _forward_indiv(self, image, label):
+    def _forward_indiv(self, image, label, attack_target):
         image.requires_grad = True
         fs = self.model(image)[0]
         _, pre = torch.max(fs, dim=0)
-        if pre != label:
+        if pre == attack_target:
             return (True, pre, image, torch.zeros_like(image))
 
         ws = self._construct_jacobian_parallel(fs, image)
@@ -90,21 +90,28 @@ class DeepFool(Attack):
 
         f_prime = f_k - f_0
         w_prime = w_k - w_0
-        value = torch.abs(f_prime) \
-                / torch.norm(nn.Flatten()(w_prime), p=2, dim=1)
-        _, hat_L = torch.min(value, 0)
 
+        hat_L = attack_target
         delta = (torch.abs(f_prime[hat_L])*w_prime[hat_L] \
                  / (torch.norm(w_prime[hat_L], p=2)**2))
 
+        # value = torch.abs(f_prime) \
+        #         / torch.norm(nn.Flatten()(w_prime), p=2, dim=1)
+        # _, hat_L = torch.min(value, 0)
+
+        # delta = (torch.abs(f_prime[hat_L])*w_prime[hat_L] \
+        #          / (torch.norm(w_prime[hat_L], p=2)**2))
+
+        # target_label = hat_L if hat_L < label else hat_L+1
 
         adv_image = image + (1+self.overshoot)*delta
         adv_image = torch.clamp(adv_image, min=0, max=1).detach()
-        
+
         adv_fs = self.model(adv_image)[0]
         _, adv_pre = torch.max(adv_fs, dim=0)
         early_stop = adv_pre != label
-        return early_stop, adv_pre, adv_image, delta
+
+        return (early_stop, adv_pre, adv_image, delta)
 
     def _construct_jacobian(self, y, x):
         x_grads = []

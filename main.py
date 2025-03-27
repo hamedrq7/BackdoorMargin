@@ -7,6 +7,7 @@ import pandas as pd
 from tempfile import mkdtemp
 from tqdm import trange
 import numpy as np 
+import json 
 
 import torch
 from torch.utils.data import DataLoader
@@ -23,7 +24,7 @@ os.chdir(parentdir)  # for pycharm user
 from dataset import build_poisoned_training_set, build_testset
 from deeplearning import evaluate_badnets, optimizer_picker, train_one_epoch
 from models import BadNet, LeNet
-from utils import make_dir
+from log_utils import make_dir
 from log_utils import (
     Logger,
     Timer,
@@ -97,6 +98,13 @@ print("{}".format(args).replace(', ', ',\n'))
 pathlib.Path(f"{runPath}/checkpoints/").mkdir(parents=True, exist_ok=True)
 pathlib.Path(f"{runPath}/logs/").mkdir(parents=True, exist_ok=True)
 basic_model_path = f"{runPath}/checkpoints/{args.model}.pth"
+
+with open("{}/args.json".format(runPath), "w") as fp:
+    json.dump(args.__dict__, fp)
+torch.save(args, "{}/args.rar".format(runPath))
+print("args: \n", args)
+
+exit()
 
 print("\n# load dataset: %s " % args.dataset)
 dataset_train, args.nb_classes, mean, std = build_poisoned_training_set(is_train=True, args=args)

@@ -48,7 +48,7 @@ def eval(data_loader, model, device, batch_size=64, print_perform=False):
     y_true = []
     y_predict = []
     loss_sum = []
-    for (batch_x, batch_y) in (data_loader):
+    for (batch_x, batch_y) in tqdm(data_loader):
 
         batch_x = batch_x.to(device, non_blocking=True)
         batch_y = batch_y.to(device, non_blocking=True)
