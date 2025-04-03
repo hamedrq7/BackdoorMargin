@@ -97,7 +97,6 @@ class DeepFool(Attack):
         delta = (torch.abs(f_prime[hat_L])*w_prime[hat_L] \
                  / (torch.norm(w_prime[hat_L], p=2)**2))
 
-
         adv_image = image + (1+self.overshoot)*delta
         adv_image = torch.clamp(adv_image, min=0, max=1).detach()
         

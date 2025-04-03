@@ -104,7 +104,6 @@ with open("{}/args.json".format(runPath), "w") as fp:
 torch.save(args, "{}/args.rar".format(runPath))
 print("args: \n", args)
 
-exit()
 
 print("\n# load dataset: %s " % args.dataset)
 dataset_train, args.nb_classes, mean, std = build_poisoned_training_set(is_train=True, args=args)

@@ -79,8 +79,8 @@ if __name__ == "__main__":
         test_ds = {'clean': data_loader_val_clean, 'poison': data_loader_val_poisoned}
        
         for phase in ['clean',]: #  'poison' 
-            for steps in [100]:
-                for overshoot in [0.02,]: # 0.01, 0.05, 0.1, 0.02,  
+            for steps in [50]:
+                for overshoot in [0.02, 0.05, 0.1]: # 0.02,  
                     batch_idx = 0
                     df = DeepFool(model, steps=steps, overshoot=overshoot)
                     # dft = DeepFoolTargeted(model, steps=100, )
@@ -124,7 +124,6 @@ if __name__ == "__main__":
                     # plot_and_save_confusion_matrix(all_labels, all_cln_preds, f'{runPath}/DeepFool', name=f'DS_{phase} cln')
                     # plot_and_save_confusion_matrix(all_labels, all_adv_preds, f'{runPath}/DeepFool', name=f'DS_{phase} adv')
 
-        
         # for phase in ['clean',]: #  'poison' 
         #     batch_idx = 0
         #     df = DeepFool(model, steps=100, )
