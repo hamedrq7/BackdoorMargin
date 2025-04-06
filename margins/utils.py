@@ -81,6 +81,15 @@ def zero_gradients(x):
             
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+# relative import hacks (sorry)
+import os 
+import sys 
+import inspect 
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0, parentdir)  # for bash user
+os.chdir(parentdir)  # for pycharm user
+from attacks.ConDeepFool import ConDeepFool
 
 def train(model, trans, trainloader, testloader, epochs, opt, loss_fun, lr_schedule, save_train_dir):
 
@@ -164,10 +173,8 @@ def test(model, trans, testloader):
 def subspace_deepfool(im, model, trans, num_classes=10, overshoot=0.02, max_iter=100, Sp=None, device=DEVICE):
     image = copy.deepcopy(im)
     input_shape = image.size()
-
-    # print(image.shape)
-    # print(trans(Variable(image, requires_grad=True)).shape)
-    # exit()
+    # Sp: same shape as image 
+    
     f_image = model(trans(Variable(image, requires_grad=True))).view((-1,))
     I = f_image.argsort(descending=True)
     I = I[0:num_classes]
@@ -248,7 +255,9 @@ def compute_margin_distribution(model, trans, dataloader, subspace_list, path, p
 
     print('Measuring margin distribution...')
     for s, Sp in enumerate(subspace_list):
-        Sp = Sp.to(DEVICE)
+        # s: int: index of subpsace? 
+        # Sp: [784, 64]
+        Sp = Sp.to(DEVICE) 
         sp_margin = []
 
         for inputs, targets in dataloader:
@@ -271,6 +280,34 @@ def compute_margin_distribution(model, trans, dataloader, subspace_list, path, p
     np.save(path, margins)
     return np.array(margins)
 
+def compute_margin_patches(model, dataloader, masks, path):
+    margins = []
+    
+    num_masks = masks.shape[0]
+
+    print('Measuring margins of masks...')
+    for index in range(num_masks):
+        mask = masks[index, :, :, :]
+        mask = mask.to(DEVICE)
+        
+        df_con = ConDeepFool(model, mask, steps=100)
+
+        mask_margin = []
+        for inputs, targets in dataloader:
+            inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
+            
+            adv_perts = torch.zeros_like(inputs)
+            
+            adv_images, adv_pred, deltas = df_con(inputs, targets, )
+
+            mask_margin.append(deltas.cpu().view([-1, np.prod(inputs.shape[1:])]).norm(dim=[1]))
+        
+        mask_margin = torch.cat(mask_margin)
+        margins.append(mask_margin.numpy())
+        print('Mask %d:\tMedian margin: %5.5f' % (index, np.median(mask_margin)))
+
+    np.save(path, margins)
+    return np.array(margins)
 
 def kron(a, b):
     siz1 = torch.Size(torch.tensor(a.shape[-2:]) * torch.tensor(b.shape[-2:]))
@@ -278,6 +315,15 @@ def kron(a, b):
     siz0 = res.shape[:-4]
     return res.reshape(siz0 + siz1)
 
+def generate_patch_masks(mask_size: int, input_dim: int, step_size: int, channels: int):
+    masks = []
+    for y in range(input_dim - mask_size, -1, -step_size):
+        for x in range(input_dim - mask_size, -1, -step_size):
+            mask = torch.zeros((input_dim, input_dim))
+            mask[y:y+mask_size, x:x+mask_size] = 1.0
+            mask = mask.unsqueeze(0).repeat(channels, 1, 1)
+            masks.append(mask)
+    return torch.stack(masks)
 
 def generate_subspace_list(subspace_dim, dim, subspace_step, channels):
     subspace_list = []
