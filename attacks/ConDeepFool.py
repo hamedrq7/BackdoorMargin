@@ -11,6 +11,7 @@ class ConDeepFool(Attack):
     """
     def __init__(self, model,
                  mask: torch.Tensor, 
+                 box_constraint: bool = True,
                  steps: int=100,
                  overshoot: float=0.02,
                  search_iter:int = 0,
@@ -24,6 +25,7 @@ class ConDeepFool(Attack):
         self.number_of_samples = number_of_samples
         self.fool_checker = 0
         self.number_of_iterations = 0
+        self.box_constraint = box_constraint 
 
     def forward(self, images, labels, ):
         r"""
@@ -89,8 +91,12 @@ class ConDeepFool(Attack):
                  / (torch.norm(w_prime[hat_L], p=2)**2))
 
         adv_image = image + (1+self.overshoot)*delta
-        adv_image = torch.clamp(adv_image, min=0, max=1).detach()
         
+        if self.box_constraint: 
+            adv_image = torch.clamp(adv_image, min=0, max=1).detach()
+        else: 
+            adv_image = adv_image.detach()
+
         adv_fs = self.model(adv_image)[0]
         _, adv_pre = torch.max(adv_fs, dim=0)
         early_stop = adv_pre != label

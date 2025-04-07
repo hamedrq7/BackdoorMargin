@@ -228,17 +228,20 @@ if __name__ == "__main__":
         #     display_image_grid(images1=imgs1, images2=deltas3, titles1=lbls3, titles2=lbls3, save_path=f'{runPath}/images', name_to_save='cln-Condf_noise')    
         #     display_image_grid(images1=deltas2, images2=deltas3, titles1=lbls2, titles2=lbls3, save_path=f'{runPath}/images', name_to_save='df_noise-Condf_noise')    
 
+        from plot_utils import plot_patch_heatmap
         from margins.utils import generate_patch_masks, compute_margin_patches
         masks = generate_patch_masks(mask_size=5, input_dim=28, step_size=5, channels=1)
         # masks: [25, 1, 28, 28]
 
-        NUM_SAMPLES_EVAL = 10
+        NUM_SAMPLES_EVAL = 100
         eval_dataset, eval_loader, num_samples = get_eval(dataset_val_clean, num_samples=NUM_SAMPLES_EVAL, batch_size=NUM_SAMPLES_EVAL, seed=111)
         margins_clean = compute_margin_patches(model, eval_loader, masks,  f'{runPath}/margins/PATCH margins - clean.npy')
+        plot_patch_heatmap(np.median(margins_clean, axis=1), f'{runPath}/margins', 'margins_patch clean')
         swarmplot(margins_clean, name = f'{runPath}/margins/PATCH margin distribiution - clean',color='tab:blue')
         
-        NUM_SAMPLES_EVAL = 10
+        NUM_SAMPLES_EVAL = 100
         eval_dataset, eval_loader, num_samples = get_eval(dataset_val_poisoned, num_samples=NUM_SAMPLES_EVAL, batch_size=NUM_SAMPLES_EVAL, seed=111)
-        margins_clean = compute_margin_patches(model, eval_loader, masks,  f'{runPath}/margins/PATCH margins - poisoned.npy')
-        swarmplot(margins_clean, name = f'{runPath}/margins/PATCH margin distribiution - poisoned',color='tab:blue')
+        margins_poisoned = compute_margin_patches(model, eval_loader, masks,  f'{runPath}/margins/PATCH margins - poisoned.npy')
+        plot_patch_heatmap(np.median(margins_poisoned, axis=1), f'{runPath}/margins', 'margins_patch poisoned')
+        swarmplot(margins_poisoned, name = f'{runPath}/margins/PATCH margin distribiution - poisoned',color='tab:blue')
         

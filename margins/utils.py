@@ -290,7 +290,7 @@ def compute_margin_patches(model, dataloader, masks, path):
         mask = masks[index, :, :, :]
         mask = mask.to(DEVICE)
         
-        df_con = ConDeepFool(model, mask, steps=100)
+        df_con = ConDeepFool(model, mask, box_constraint=True, steps=100)
 
         mask_margin = []
         for inputs, targets in dataloader:
