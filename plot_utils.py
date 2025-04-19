@@ -4,6 +4,38 @@ import numpy as np
 from log_utils import make_dir
 import os 
 
+def plot_patch_heatmap(patch_values, path, name, grid_size=5, ):
+    """
+    Plot a heatmap from patch values in bottom-right → top-left order.
+    Grid is shown directly; no image coordinates involved.
+    """
+    assert len(patch_values) == grid_size ** 2, f"Expected {grid_size**2} patch values"
+
+    # Create empty grid
+    heatmap = np.zeros((grid_size, grid_size))
+
+    idx = 0
+    for row in range(grid_size):  # from bottom (0) to top (4)
+        for col in range(grid_size-1, -1, -1):  # right to left
+            heatmap[grid_size - 1 - row, col] = patch_values[idx]
+            idx += 1
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    im = ax.imshow(heatmap, cmap='viridis', interpolation='nearest')
+
+    # Annotate with values
+    for i in range(grid_size):
+        for j in range(grid_size):
+            ax.text(j, i, f'{heatmap[i, j]:.2f}', ha='center', va='center', color='white', fontsize=8)
+
+    ax.set_xticks(np.arange(grid_size))
+    ax.set_yticks(np.arange(grid_size))
+    ax.set_xticklabels([str(i) for i in range(grid_size)])
+    ax.set_yticklabels([str(i) for i in range(grid_size)])
+    ax.set_title("Patch Value Heatmap (Bottom-Right → Top-Left)")
+    plt.colorbar(im, ax=ax)
+    plt.savefig(f'{path}/{name}.png')
+
 def display_image_grid(images1, images2, titles1=None, titles2=None, save_path=None, name_to_save=None, dpi=150):
     """
     images1 and images2: lists of 8 grayscale images (numpy arrays)
