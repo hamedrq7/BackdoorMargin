@@ -165,9 +165,6 @@ def subspace_deepfool(im, model, trans, num_classes=10, overshoot=0.02, max_iter
     image = copy.deepcopy(im)
     input_shape = image.size()
 
-    # print(image.shape)
-    # print(trans(Variable(image, requires_grad=True)).shape)
-    # exit()
     f_image = model(trans(Variable(image, requires_grad=True))).view((-1,))
     I = f_image.argsort(descending=True)
     I = I[0:num_classes]
@@ -271,6 +268,35 @@ def compute_margin_distribution(model, trans, dataloader, subspace_list, path, p
     np.save(path, margins)
     return np.array(margins)
 
+def compute_margin_patches(model, dataloader, masks, ):
+    margins = []
+    
+    num_masks = masks.shape[0]
+
+    print('Measuring margins of masks...')
+    for index in range(num_masks):
+        mask = masks[index, :, :, :]
+        mask = mask.to(DEVICE)
+        
+        from attacks.attack import ConDeepFool
+        df_con = ConDeepFool(model, steps=100)
+
+        mask_margin = []
+        for inputs, targets in dataloader:
+            inputs, targets = inputs.to(DEVICE), targets.to(DEVICE)
+            
+            adv_perts = torch.zeros_like(inputs)
+            
+            adv_images, adv_pred, deltas = df_con(inputs, targets, )
+
+            mask_margin.append(deltas.cpu().view([-1, np.prod(inputs.shape[1:])]).norm(dim=[1]))
+        
+        mask_margin = torch.cat(mask_margin)
+        margins.append(mask_margin.numpy())
+        print('Mask %d:\tMedian margin: %5.5f' % (index, np.median(mask_margin)))
+
+    # np.save(path, margins)
+    return np.array(margins)
 
 def kron(a, b):
     siz1 = torch.Size(torch.tensor(a.shape[-2:]) * torch.tensor(b.shape[-2:]))
@@ -305,6 +331,12 @@ def generate_subspace_list(subspace_dim, dim, subspace_step, channels):
         idx_j += subspace_step
 
     return subspace_list
+
+def generate_patch_masks(mask_size: int, input_dim: int, step_size: int, channels: int):
+    # C, T, H, W = 1, 5, 28, 28        
+    # mask = torch.zeros(C, H, W)
+    # mask[:, H - T:H, W - T:W] = 1.
+
 
 
 def get_dataset_loaders(dataset, dataset_dir, batch_size=128):
